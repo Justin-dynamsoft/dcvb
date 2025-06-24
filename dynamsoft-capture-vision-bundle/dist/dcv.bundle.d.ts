@@ -495,7 +495,7 @@ declare class CoreModule {
     static get _bDebug(): boolean;
     static set _bDebug(value: boolean);
     static _bundleEnv: "DCV" | "DBR";
-    static _workerName: string;
+    static get _workerName(): string;
     static _useSimd: boolean;
     /**
      * Determine if the decoding module has been loaded successfully.
@@ -1009,10 +1009,11 @@ declare const productNameMap: {
 
 export { Arc, BinaryImageUnit, CapturedResultBase, CapturedResultItem, ColourImageUnit, Contour, ContoursUnit, CoreModule, Corner, DSFile, DSImageData, DSRect, DwtInfo, Edge, EngineResourcePaths, EnhancedGrayscaleImageUnit, EnumBufferOverflowProtectionMode, EnumCapturedResultItemType, EnumColourChannelUsageType, EnumCornerType, EnumCrossVerificationStatus, EnumErrorCode, EnumGrayscaleEnhancementMode, EnumGrayscaleTransformationMode, EnumImageCaptureDistanceMode, EnumImageFileFormat, EnumImagePixelFormat, EnumImageTagType, EnumIntermediateResultUnitType, EnumModuleName, EnumPDFReadingMode, EnumRasterDataSource, EnumRegionObjectElementType, EnumSectionType, EnumTransformMatrixType, FileImageTag, GrayscaleImageUnit, ImageSourceAdapter, ImageSourceErrorListener, ImageTag, InnerVersions, IntermediateResult, IntermediateResultExtraInfo, IntermediateResultUnit, LineSegment, LineSegmentsUnit, MapController, MimeType, ObservationParameters, OriginalImageResultItem, PDFReadingParameter, PathInfo, Point, Polygon, PostMessageBody, PredetectedRegionElement, PredetectedRegionsUnit, Quadrilateral, Rect, RegionObjectElement, ScaledColourImageUnit, ShortLinesUnit, TextRemovedBinaryImageUnit, TextZone, TextZonesUnit, TextureDetectionResultUnit, TextureRemovedBinaryImageUnit, TextureRemovedGrayscaleImageUnit, TransformedGrayscaleImageUnit, Warning, WasmVersions, WorkerAutoResources, _getNorImageData, _saveToFile, _toBlob, _toCanvas, _toImage, bDebug, checkIsLink, compareVersion, doOrWaitAsyncDependency, getNextTaskID, handleEngineResourcePaths, innerVersions, isArc, isContour, isDSImageData, isDSRect, isImageTag, isLineSegment, isObject, isOriginalDsImageData, isPoint, isPolygon, isQuad, isRect, isSimdSupported, mapAsyncDependency, mapPackageRegister, mapTaskCallBack, onLog, productNameMap, requestResource, setBDebug, setOnLog, waitAsyncDependency, worker, workerAutoResources };
 
-
-
-
-
+import { CapturedResultBase, CapturedResultItem, OriginalImageResultItem, ObservationParameters, IntermediateResult, IntermediateResultExtraInfo, PredetectedRegionsUnit, IntermediateResultUnit, ColourImageUnit, ScaledColourImageUnit, GrayscaleImageUnit, TransformedGrayscaleImageUnit, EnhancedGrayscaleImageUnit, BinaryImageUnit, TextureDetectionResultUnit, TextureRemovedGrayscaleImageUnit, TextureRemovedBinaryImageUnit, ContoursUnit, LineSegmentsUnit, TextZonesUnit, TextRemovedBinaryImageUnit, ShortLinesUnit, DSImageData, Quadrilateral, ImageSourceAdapter } from 'dynamsoft-core';
+import { ParsedResult } from '@dynamsoft/dynamsoft-code-parser';
+import { ProcessedDocumentResult, SimplifiedDocumentNormalizerSettings } from '@dynamsoft/dynamsoft-document-normalizer';
+import { DecodedBarcodesResult, SimplifiedBarcodeReaderSettings } from '@dynamsoft/dynamsoft-barcode-reader';
+import { RecognizedTextLinesResult, BufferedCharacterItemSet, SimplifiedLabelRecognizerSettings } from '@dynamsoft/dynamsoft-label-recognizer';
 
 interface CapturedResult extends CapturedResultBase {
     items: Array<CapturedResultItem>;
@@ -1110,22 +1111,60 @@ declare class IntermediateResultManager {
 }
 
 declare enum EnumImageSourceState {
+    /** 
+     * Indicates that the buffer of the image source is currently empty.
+     */
     ISS_BUFFER_EMPTY = 0,
+    /** 
+    * Signifies that the source for the image source has been depleted. 
+    */
     ISS_EXHAUSTED = 1
 }
 
 interface ImageSourceStateListener {
+    /**
+     * Event triggered whenever there is a change in the image source's state.
+     * @param status This parameter indicates the current status of the image source, using the `EnumImageSourceState` type. 
+     * This enumeration defines various possible states of an image source.
+     */
     onImageSourceStateReceived?: (status: EnumImageSourceState) => void;
 }
 
 interface SimplifiedCaptureVisionSettings {
+    /**
+     * Specifies weather to output the original image.
+     */
     outputOriginalImage: boolean;
+    /**
+     * Designates the region of interest (ROI) within an image, limiting the image processing activities exclusively to this specified area. It is of type `Quadrilateral`.
+     */
     roi: Quadrilateral;
+    /**
+     * Determines if the coordinates for the region of interest (ROI) are expressed in percentage terms (true) or as exact pixel measurements (false).
+     */
     roiMeasuredInPercentage: boolean;
+    /**
+     * Specifies the timeout duration for processing an image, in milliseconds.
+     */
     timeout: number;
+    /**
+     * Specifies the shortest time span, in milliseconds, that must elapse between two successive image captures. Opting for a higher interval decreases capture frequency, which can lower the system's processing load and conserve energy. On the other hand, a smaller interval value increases the frequency of image captures, enhancing the system's responsiveness.
+     * @remarks Handling of Special Values:
+     *   -1: This value ensures the image source waits until processing of the current image is complete before starting to acquire the next one. This approach ensures there is a deliberate pause between processing consecutive images.
+     *   0 (The default setting): Adopting this value means the image source queues up the next image for immediate availability once processing of the current image is finished, facilitating continuous, uninterrupted image processing.
+     */
     minImageCaptureInterval: number;
+    /**
+     * Specifies the basic settings for the barcode reader module. It is of type `SimplifiedBarcodeReaderSettings`.
+     */
     barcodeSettings: SimplifiedBarcodeReaderSettings;
+    /**
+     * Specifies the basic settings for the document normalizer module. It is of type `SimplifiedDocumentNormalizerSettings`.
+     */
     documentSettings: SimplifiedDocumentNormalizerSettings;
+    /**
+     * Specifies the basic settings for the label recognizer module. It is of type `SimplifiedLabelRecognizerSettings`.
+     */
     labelSettings: SimplifiedLabelRecognizerSettings;
 }
 
@@ -1138,7 +1177,14 @@ declare class CaptureVisionRouter {
     #private;
     static _onLog: (message: string) => void;
     static _defaultTemplate: string;
+    /**
+     * The maximum length of the longer side of the image to be processed. The default value is 2048 pixels in mobile devices and 4096 pixels in desktop browser.
+     */
     maxImageSideLength: number;
+    /**
+     * An event that fires when an error occurs from the start of capturing process.
+     * @param error The error object that contains the error code and error string.
+     */
     onCaptureError: (error: Error) => void;
     _instanceID: number;
     private _dsImage;
@@ -1198,9 +1244,12 @@ declare class CaptureVisionRouter {
      */
     getInput(): ImageSourceAdapter;
     /**
-     * Adds or removes listeners for image source state change.
+     * Adds listeners for image source state change.
      */
     addImageSourceStateListener(listener: ImageSourceStateListener): void;
+    /**
+     * Removes listeners for image source state change.
+     */
     removeImageSourceStateListener(listener: ImageSourceStateListener): boolean;
     /**
      * Adds a `CapturedResultReceiver` object as the receiver of captured results.
@@ -1341,6 +1390,9 @@ declare class CaptureVisionRouter {
 
 declare class CaptureVisionRouterModule {
     private static _version;
+    /**
+     * Returns the version of the CaptureVisionRouter module.
+     */
     static getVersion(): string;
 }
 
@@ -1443,10 +1495,14 @@ declare enum EnumPresetTemplate {
     PT_RECOGNIZE_UPPERCASE_LETTERS = "RecognizeUppercaseLetters"
 }
 
-export { CaptureVisionRouter, CaptureVisionRouterModule, CapturedResult, CapturedResultFilter, CapturedResultReceiver, EnumImageSourceState, EnumPresetTemplate, ImageSourceStateListener, IntermediateResultReceiver, RawImageResultItem, SimplifiedCaptureVisionSettings };
+export { CaptureVisionRouter, CaptureVisionRouterModule, type CapturedResult, type CapturedResultFilter, CapturedResultReceiver, EnumImageSourceState, EnumPresetTemplate, type ImageSourceStateListener, IntermediateResultReceiver, type RawImageResultItem, type SimplifiedCaptureVisionSettings };
 
+import { CapturedResultItem, Quadrilateral, CapturedResultBase, RegionObjectElement, DSImageData, EnumGrayscaleTransformationMode, EnumGrayscaleEnhancementMode, IntermediateResultExtraInfo, IntermediateResultUnit } from 'dynamsoft-core';
 
 declare class BarcodeReaderModule {
+    /**
+     * Returns the version of the BarcodeReader module.
+     */
     static getVersion(): string;
 }
 
@@ -1555,15 +1611,22 @@ declare const EnumBarcodeFormat: {
 type EnumBarcodeFormat = bigint;
 
 declare enum EnumExtendedBarcodeResultType {
+    /**Specifies the standard text. This means the barcode value. */
     EBRT_STANDARD_RESULT = 0,
+    /**Specifies all the candidate text. This means all the standard text results decoded from the barcode. */
     EBRT_CANDIDATE_RESULT = 1,
+    /**Specifies the partial text. This means part of the text result decoded from the barcode. */
     EBRT_PARTIAL_RESULT = 2
 }
 
 declare enum EnumQRCodeErrorCorrectionLevel {
+    /** High error correction level, allowing for up to 30% data recovery. Suitable for environments where QR codes might be subject to significant damage. */
     QRECL_ERROR_CORRECTION_H = 0,
+    /** Low error correction level, allowing for up to 7% data recovery. Optimal for scenarios where QR code integrity is less likely to be compromised. */
     QRECL_ERROR_CORRECTION_L = 1,
+    /** Medium-low error correction level, allowing for up to 15% data recovery. Balances the need for data integrity with the desire to maximize data capacity. */
     QRECL_ERROR_CORRECTION_M = 2,
+    /** Medium-high error correction level, allowing for up to 25% data recovery. Designed for situations where some QR code damage might be expected. */
     QRECL_ERROR_CORRECTION_Q = 3
 }
 
@@ -1573,33 +1636,58 @@ declare enum EnumQRCodeErrorCorrectionLevel {
  * Describes the localization mode.
  */
 declare enum EnumLocalizationMode {
+    /** Automatic localization mode selection; not yet implemented. */
     LM_AUTO = 1,
+    /** Identifies barcodes by finding connected blocks, offering optimal results, especially recommended for highest priority in most scenarios. */
     LM_CONNECTED_BLOCKS = 2,
+    /** Detects barcodes through analysis of patterns of contiguous black and white regions, tailored for QR Codes and DataMatrix codes. */
     LM_STATISTICS = 4,
+    /** Locates barcodes by identifying linear patterns, designed primarily for 1D barcodes and PDF417 codes. */
     LM_LINES = 8,
+    /** Provides rapid barcode localization, suited for interactive applications where speed is crucial. */
     LM_SCAN_DIRECTLY = 16,
+    /** Targets barcode localization through detection of specific mark groups, optimized for Direct Part Marking (DPM) codes. */
     LM_STATISTICS_MARKS = 32,
+    /** Combines methods of locating connected blocks and linear patterns to efficiently localize postal codes. */
     LM_STATISTICS_POSTAL_CODE = 64,
+    /** Initiates barcode localization from the image center, facilitating faster detection in certain layouts. */
     LM_CENTRE = 128,
+    /** Specialized for quick localization of 1D barcodes, enhancing performance in fast-scan scenarios. */
     LM_ONED_FAST_SCAN = 256,
+    /** Reserved for future use in localization mode settings. */
     LM_REV = -2147483648,
+    /** Omits the localization process entirely. */
     LM_SKIP = 0,
+    /** Placeholder value with no functional meaning. */
     LM_END = -1
 }
 
 declare enum EnumDeblurMode {
+    /** Applies a direct binarization algorithm for generating the binary image. */
     DM_DIRECT_BINARIZATION = 1,
+    /** Utilizes a threshold binarization algorithm for generating the binary image, dynamically determining the threshold based on the image content. */
     DM_THRESHOLD_BINARIZATION = 2,
+    /** Employs a gray equalization algorithm to adjust the contrast and brightness, improving the clarity of the gray-scale image before binarization. */
     DM_GRAY_EQUALIZATION = 4,
+    /** Implements a smoothing algorithm to reduce noise and artifacts, smoothing out the gray-scale image before binarization. */
     DM_SMOOTHING = 8,
+    /** Uses a morphing algorithm to enhance the gray-scale image before binarization. */
     DM_MORPHING = 16,
+    /** Engages in a deep analysis of the grayscale image based on the barcode format to intelligently generate the optimized binary image, tailored to complex or severely blurred images. */
     DM_DEEP_ANALYSIS = 32,
+    /** Applies a sharpening algorithm to enhance the edges and details of the barcode, making it more distinguishable on the gray-scale image before binarization. */
     DM_SHARPENING = 64,
+    /** Decodes the barcodes based on the binary image obtained during the localization process. */
     DM_BASED_ON_LOC_BIN = 128,
+    /** Combines sharpening and smoothing algorithms for a comprehensive deblurring effect, targeting both clarity and smoothness of the gray-scale image before binarization. */
     DM_SHARPENING_SMOOTHING = 256,
+    /** Performs deblur process by utilizing a neural network model. */
     DM_NEURAL_NETWORK = 512,
+    /** Reserved for future use. */
     DM_REV = -2147483648,
+    /** Skips the process, no deblurring is applied. */
     DM_SKIP = 0,
+    /** Placeholder value with no functional meaning. */
     DM_END = -1
 }
 
@@ -1607,34 +1695,59 @@ interface BarcodeDetails {
 }
 
 interface AztecDetails extends BarcodeDetails {
+    /** Number of rows in the Aztec barcode. */
     rows: number;
+    /** Number of columns in the Aztec barcode. */
     columns: number;
+    /**
+     * Indicates the layer number of the Aztec barcode. Negative values represent compact codes,
+     * while positive values represent full-range codes.
+     */
     layerNumber: number;
 }
 
 interface BarcodeResultItem extends CapturedResultItem {
+    /** The format of the decoded barcode, as defined by `EnumBarcodeFormat`. */
     format: EnumBarcodeFormat;
+    /** A string representation of the barcode format. */
     formatString: string;
+    /** The decoded text from the barcode. */
     text: string;
+    /** The raw byte data of the decoded barcode. */
     bytes: Uint8Array;
+    /** The location of the barcode in the image, represented as a quadrilateral. */
     location: Quadrilateral;
+    /** A confidence score for the barcode detection. */
     confidence: number;
+    /** The rotation angle of the barcode in the image. */
     angle: number;
+    /** The size of a single module in the barcode. */
     moduleSize: number;
+    /** Additional details specific to the type of barcode detected. */
     details: BarcodeDetails;
+    /** Indicates if the barcode is mirrored. */
     isMirrored: boolean;
+    /** Indicates if the barcode is detected using Direct Part Marking (DPM) method. */
     isDPM: boolean;
 }
 
 interface DataMatrixDetails extends BarcodeDetails {
+    /** Number of rows in the Data Matrix barcode. */
     rows: number;
+    /** Number of columns in the Data Matrix barcode. */
     columns: number;
+    /** Number of rows in the data region of the barcode. Data regions are subdivisions of the barcode where data is stored. */
     dataRegionRows: number;
+    /** Number of columns in the data region of the barcode. Data regions are subdivisions of the barcode where data is stored. */
     dataRegionColumns: number;
+    /** Number of data regions in the barcode. */
     dataRegionNumber: number;
 }
 
 interface DecodedBarcodesResult extends CapturedResultBase {
+    /**
+     * An array of `BarcodeResultItem` objects, each representing a decoded barcode within the original image. 
+     */
     readonly barcodeResultItems: Array<BarcodeResultItem>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -1647,68 +1760,116 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface DecodedBarcodeElement extends RegionObjectElement {
+    /** The format of the decoded barcode, as defined by `EnumBarcodeFormat`. */
     format: EnumBarcodeFormat;
+    /** A string representation of the barcode format. */
     formatString: string;
+    /** The decoded text from the barcode. */
     text: string;
+    /** The raw byte data of the decoded barcode. */
     bytes: Uint8Array;
+    /** Additional details specific to the type of barcode detected. */
     details: BarcodeDetails;
+    /** Indicates if the barcode is detected using Direct Part Marking (DPM) method. */
     isDPM: boolean;
+    /** Indicates if the barcode is mirrored. */
     isMirrored: boolean;
+    /** The rotation angle of the barcode in the image. */
     angle: number;
+    /** The size of a single module in the barcode. */
     moduleSize: number;
+    /** A confidence score for the barcode detection. */
     confidence: number;
+    /** Array of extended barcode results if available. */
     extendedBarcodeResults: Array<ExtendedBarcodeResult>;
 }
 
 interface ExtendedBarcodeResult extends DecodedBarcodeElement {
+    /** Type of the extended barcode result. */
     extendedBarcodeResultType: EnumExtendedBarcodeResultType;
+    /** Deformation level of the barcode. */
     deformation: number;
+    /** Clarity score of the barcode. */
     clarity: number;
+    /** Image data sampled from the barcode. */
     samplingImage: DSImageData;
 }
 
 interface OneDCodeDetails extends BarcodeDetails {
+    /** Start characters of the barcode in a byte array, used to identify the beginning of the barcode. */
     startCharsBytes: Array<number>;
+    /** Stop characters of the barcode in a byte array, used to identify the end of the barcode.*/
     stopCharsBytes: Array<number>;
+    /** Check digit characters of the barcode in a byte array, used for error detection and correction in some 1D barcodes.*/
     checkDigitBytes: Array<number>;
+    /** Position range of the start pattern relative to the barcode's location. */
     startPatternRange: number;
+    /** Position range of the middle pattern relative to the barcode's location. */
     middlePatternRange: number;
+    /** Position range of the end pattern relative to the barcode's location. */
     endPatternRange: number;
 }
 
 interface PDF417Details extends BarcodeDetails {
+    /** Number of rows in the PDF417 barcode. */
     rows: number;
+    /** Number of columns in the PDF417 barcode. */
     columns: number;
+    /** The error correction level of the PDF417 barcode. */
     errorCorrectionLevel: number;
+    /** Indicates whether the left row indicator of the PDF417 code exists (1 means yes, 0 means no). The left row indicator is used to denote the start of a new row in the barcode. */
     hasLeftRowIndicator: boolean;
+    /** Indicates whether the right row indicator of the PDF417 code exists (1 means yes, 0 means no). The right row indicator is used to denote the end of a row in the barcode. */
     hasRightRowIndicator: boolean;
+    /** The codewords array of the PDF417 Code. */
     codewords: Array<number>;
 }
 
 interface QRCodeDetails extends BarcodeDetails {
+    /** Number of rows in the QR Code. */
     rows: number;
+    /** Number of columns in the QR Code. */
     columns: number;
+    /** The error correction level of the QR Code. */
     errorCorrectionLevel: number;
+    /** The version of the QR Code. */
     version: number;
+    /** Number of models of the QR Code. */
     model: number;
+    /** First data encoding mode used in the QR Code. */
     mode: number;
+    /** Position of the particular symbol in the Structured Append format of the QR Code. */
     page: number;
+    /** Total number of symbols to be concatenated in the Structured Append format. */
     totalPage: number;
+    /** Parity data obtained by XORing byte by byte the ASCII/JIS values of all the original input data before division into symbol blocks. It's used for error checking and correction. */
     parityData: number;
+    /** The data mask pattern of the QR Code, 0-7 for regular QR; 0-3 for micro-QR.  */
     dataMaskPattern: number;
+    /** The codewords array of the QR Code. */
     codewords: Array<string>;
 }
 
 interface SimplifiedBarcodeReaderSettings {
+    /** Specifies the barcode formats to be detected. */
     barcodeFormatIds: EnumBarcodeFormat;
+    /** Expected number of barcodes to detect. */
     expectedBarcodesCount: number;
+    /** Grayscale transformation modes to apply, enhancing detection capability. */
     grayscaleTransformationModes: Array<EnumGrayscaleTransformationMode>;
+    /** Grayscale enhancement modes to apply for improving detection in challenging conditions. */
     grayscaleEnhancementModes: Array<EnumGrayscaleEnhancementMode>;
+    /** Localization modes to use for detecting barcodes in various orientations or positions. */
     localizationModes: Array<number>;
+    /** Deblur modes to apply for improving detection of barcodes. */
     deblurModes: Array<number>;
+    /** Minimum confidence level required for a barcode to be considered successfully detected. */
     minResultConfidence: number;
+    /** Minimum length of barcode text to be considered valid. */
     minBarcodeTextLength: number;
+    /** Regular expression pattern that the detected barcode text must match. */
     barcodeTextRegExPattern: string;
+    /** Threshold for reducing the size of large images to speed up processing. If the size of the image's shorter edge exceeds this threshold, the image may be downscaled to decrease processing time. The standard setting is 2300. */
     scaleDownThreshold: number;
 }
 
@@ -1780,14 +1941,20 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface LocalizedBarcodeElement extends RegionObjectElement {
+    /** Possible formats of the localized barcode. */
     possibleFormats: EnumBarcodeFormat;
+    /** String representation of the possible formats. */
     possibleFormatsString: string;
+    /** The rotation angle of the localized barcode in the image. */
     angle: number;
+    /** The size of a single module in the localized barcode. */
     moduleSize: number;
+    /** A confidence score for the localized barcode detection. */
     confidence: number;
 }
 
 interface LocalizedBarcodesUnit extends IntermediateResultUnit {
+    /** An array of `LocalizedBarcodeElement` objects, each representing a localized barcode. */
     localizedBarcodes: Array<LocalizedBarcodeElement>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -1797,6 +1964,7 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface ScaledBarcodeImageUnit extends IntermediateResultUnit {
+    /** Image data of the scaled barcode. */
     imageData: DSImageData;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -1808,96 +1976,196 @@ declare module "dynamsoft-capture-vision-bundle" {
 export { BarcodeReaderModule, EnumBarcodeFormat, EnumDeblurMode, EnumExtendedBarcodeResultType, EnumLocalizationMode, EnumQRCodeErrorCorrectionLevel };
 export type { AztecDetails, BarcodeDetails, BarcodeResultItem, CandidateBarcodeZone, CandidateBarcodeZonesUnit, ComplementedBarcodeImageUnit, DataMatrixDetails, DecodedBarcodeElement, DecodedBarcodesResult, DecodedBarcodesUnit, DeformationResistedBarcode, DeformationResistedBarcodeImageUnit, ExtendedBarcodeResult, LocalizedBarcodeElement, LocalizedBarcodesUnit, OneDCodeDetails, PDF417Details, QRCodeDetails, ScaledBarcodeImageUnit, SimplifiedBarcodeReaderSettings };
 
+import { ImageTag, DSRect, DSImageData, Point, Rect, Polygon, LineSegment, Quadrilateral, ImageSourceAdapter, Warning, ImageSourceErrorListener, EnumImagePixelFormat } from 'dynamsoft-core';
 
 declare class CameraEnhancerModule {
+    /**
+     * Returns the version of the CameraEnhancer module.
+     */
     static getVersion(): string;
 }
 
 interface VideoFrameTag extends ImageTag {
+    /** Indicates whether the video frame is cropped. */
     isCropped: boolean;
+    /** The region based on which the original frame was cropped. If `isCropped` is false, the region covers the entire original image. */
     cropRegion: DSRect;
+    /** The original width of the video frame before any cropping. */
     originalWidth: number;
+    /** The original height of the video frame before any cropping. */
     originalHeight: number;
+    /** The current width of the video frame after cropping. */
     currentWidth: number;
+    /** The current height of the video frame after cropping. */
     currentHeight: number;
+    /** The time spent acquiring the frame, in milliseconds. */
     timeSpent: number;
+    /** The timestamp marking the completion of the frame acquisition. */
     timeStamp: number;
 }
 
 interface DCEFrame extends DSImageData {
+    /** Converts the image data into an HTMLCanvasElement for display or further manipulation in web applications. */
     toCanvas: () => HTMLCanvasElement;
+    /** Flag indicating whether the frame is a `DCEFrame`. */
     isDCEFrame: boolean;
+    /** Holds extra information about the image data which is extracted from video streams. */
     tag?: VideoFrameTag;
 }
 
 interface DrawingItemEvent extends Event {
+    /** The drawing item that is the target of the event. */
     targetItem: DrawingItem;
+    /** The X coordinate of the item relative to the viewpoint of the browser window. */
     itemClientX: number;
+    /** The Y coordinate of the item relative to the viewpoint of the browser window. */
     itemClientY: number;
+    /** The X coordinate of the item relative to the entire document (the webpage content). */
     itemPageX: number;
+    /** The Y coordinate of the item relative to the entire document (the webpage content). */
     itemPageY: number;
 }
 
 interface DrawingStyle {
+    /** 
+     * ID for the drawing style.
+     * The `id` property is immutable and is exclusively assigned at the creation of a new drawing style.
+     */
     id?: number;
+    /** 
+     * The width of lines.
+     * If not specified, the default is 2.
+     */
     lineWidth?: number;
+    /**
+     * The fill color and opacity in rgba format.
+     * If not specified, the default is "rgba(245, 236, 73, 0.5)".
+     */
     fillStyle?: string;
+    /** 
+     * The stroke color and opacity in rgba format.
+     * If not specified, the default is "rgba(245, 236, 73, 1)".
+     */
     strokeStyle?: string;
+    /** 
+     * The mode of painting.
+     * If not specified, the default is "stroke".
+     */
     paintMode?: "fill" | "stroke" | "strokeAndFill";
+    /**
+     * The font family for text elements.
+     * If not specified, the default is "consolas".
+     */
     fontFamily?: string;
+    /**
+     * The font size for text elements.
+     * If not specified, the default is 40.
+     */
     fontSize?: number;
 }
 
 interface Note {
+    /** The name of the note. */
     name: string;
+    /** The content of the note, can be of any type. */
     content: any;
 }
 
 interface PlayCallbackInfo {
+    /** The height of the video frame. */
     height: number;
+    /** The width of the video frame. */
     width: number;
+    /** The unique identifier of the camera. */
     deviceId: string;
 }
 
 interface Resolution {
+    /** The width of the video frame. */
     width: number;
+    /** The height of the video frame. */
     height: number;
 }
 
 interface TipConfig {
+    /** The top left point of the tip message box. */
     topLeftPoint: Point;
+    /** The width of the tip message box. */
     width: number;
+    /** The display duration of the tip in milliseconds. */
     duration: number;
+     /** The base coordinate system used (e.g., "view" or "image"). */
     coordinateBase?: "view" | "image";
 }
 
 interface VideoDeviceInfo {
+    /** The unique identifier for the camera. */
     deviceId: string;
+    /** The label or name of the camera. */
     label: string;
     /** @ignore */
     _checked: boolean;
 }
 
 declare enum EnumDrawingItemMediaType {
+    /**
+     * Represents a rectangle, a basic geometric shape with four sides where opposite sides are equal in length and it has four right angles.
+     */
     DIMT_RECTANGLE = 1,
+    /**
+     * Represents any four-sided figure. This includes squares, rectangles, rhombuses, and more general forms that do not necessarily have right angles or equal sides.
+     */
     DIMT_QUADRILATERAL = 2,
+    /**
+     * Represents a text element. This allows for the inclusion of textual content as a distinct drawing item within the graphic representation.
+     */
     DIMT_TEXT = 4,
+    /**
+     * Represents an arc, which is a portion of the circumference of a circle or an ellipse. Arcs are used to create curved shapes and segments.
+     */
     DIMT_ARC = 8,
+    /**
+     * Represents an image. This enables embedding bitmap images within the drawing context.
+     */
     DIMT_IMAGE = 16,
+    /**
+     * Represents a polygon, which is a plane figure that is described by a finite number of straight line segments connected to form a closed polygonal chain or circuit.
+     */
     DIMT_POLYGON = 32,
+    /**
+     * Represents a line segment. This is the simplest form of a drawing item, defined by two endpoints and the straight path connecting them.
+     */
     DIMT_LINE = 64,
+    /**
+     * Represents a group of drawing items. This allows for the logical grouping of multiple items, treating them as a single entity for manipulation or transformation purposes.
+     */
     DIMT_GROUP = 128
 }
 
 declare enum EnumDrawingItemState {
+    /**
+     * DIS_DEFAULT: The default state of a drawing item. This state indicates that the drawing item is in its normal, unselected state.
+     */
     DIS_DEFAULT = 1,
+    /**
+     * DIS_SELECTED: Indicates that the drawing item is currently selected. This state can trigger different behaviors or visual styles, such as highlighting the item to show it is active or the focus of user interaction.
+     */
     DIS_SELECTED = 2
 }
 
 declare enum EnumEnhancedFeatures {
+    /**
+     * Enables auto-focus on areas likely to contain barcodes, assisting in their identification and interpretation.
+     */
     EF_ENHANCED_FOCUS = 4,
+    /**
+     * Facilitates automatic zooming in on areas likely to contain barcodes, aiding in their detection and decoding.
+     */
     EF_AUTO_ZOOM = 16,
-    EF_TAP_TO_FOCUS = 64
+    /**
+     * Allows users to tap on a specific item or area in the video feed to focus on, simplifying the interaction for selecting or highlighting important elements.
+     */
+    EF_TAP_TO_FOCUS = 64,
 }
 
 declare enum EnumPixelFormat {
@@ -2020,7 +2288,7 @@ declare abstract class DrawingItem {
     _getFabricObject(): any;
     /**
      *
-     * @param state
+     * @param state Specifies the state of the `DrawingItem` as a string.
      * @ignore
      */
     setState(state: EnumDrawingItemState): void;
@@ -2286,9 +2554,21 @@ declare class DT_Group extends DrawingItem {
 }
 
 declare class DrawingLayer {
+    /**
+     * Predefined ID for the default layer meant to be used by Dynamsoft Document Normalizer.
+     */
     static DDN_LAYER_ID: number;
+    /**
+     * Predefined ID for the default layer meant to be used by Dynamsoft Barcode Reader.
+     */
     static DBR_LAYER_ID: number;
+    /**
+     * Predefined ID for the default layer meant to be used by Dynamsoft Label Recognizer.
+     */
     static DLR_LAYER_ID: number;
+    /**
+     * The starting ID for user-defined layers, distinguishing them from default system layers.
+     */
     static USER_DEFINED_LAYER_BASE_ID: number;
     /**
      * @ignore
@@ -2493,11 +2773,43 @@ declare class DrawingLayer {
 
 declare class DrawingLayerManager {
     _arrDrawingLayer: DrawingLayer[];
+    /**
+     * Creates a new `DrawingLayer` object and returns it.
+     * @param baseCvs An `HTMLCanvasElement` used as the base for creating the `DrawingLayer` object.
+     * @param drawingLayerId Assign a unique number as an identifier for the `DrawingLayer` object.
+     * 
+     * @returns The created `DrawingLayer` object.
+     */
     createDrawingLayer(baseCvs: HTMLCanvasElement, drawingLayerId: number): DrawingLayer;
+    /**
+     * Deletes a user-defined `DrawingLayer` object specified by its unique identifier (ID).
+     * [NOTE] The name for the same method on `CameraView` or `ImageEditorView` is deleteUserDefinedDrawingLayer().
+     * @param drawingLayerId The unique identifier (ID) of the `DrawingLayer` object.
+     */
     deleteDrawingLayer(drawingLayerId: number): void;
+    /**
+     * Clears all user-defined `DrawingLayer` objects, resetting the drawing space without affecting default built-in `DrawingLayer` objects.
+     * [NOTE] The name for the same method on `CameraView` or `ImageEditorView` is clearUserDefinedDrawingLayers().
+     */
     clearDrawingLayers(): void;
+    /**
+     * Retrieves a `DrawingLayer` object by its unique identifier (ID).
+     * @param id The unique identifier (ID) of the `DrawingLayer` object.
+     * 
+     * @returns The `DrawingLayer` object specified by its unique identifier (ID) or `null`.
+     */
     getDrawingLayer(drawingLayerId: number): DrawingLayer;
+    /**
+     * Returns an array of all `DrawingLayer` objects managed by this `DrawingLayerManager`.
+     * 
+     * @returns An array of all `DrawingLayer` objects.
+     */
     getAllDrawingLayers(): Array<DrawingLayer>;
+    /**
+     * Returns an array of all selected DrawingItem instances across different layers, supporting complex selection scenarios.
+     * 
+     * @returns  An array of `DrawingItem` objects.
+     */
     getSelectedDrawingItems(): Array<DrawingItem>;
     setDimensions(dimensions: {
         width: number | string;
@@ -4037,10 +4349,14 @@ declare class CameraManager {
 declare class Feedback {
     #private;
     static allowBeep: boolean;
+    /** Returns or sets the beep's sound source. */
     static beepSoundSource: string;
+    /** Initiates a beep sound upon invocation. */
     static beep(): void;
     static allowVibrate: boolean;
+    /** Determines the vibration's duration in milliseconds. */
     static vibrateDuration: number;
+    /** Activates device vibration upon invocation. */
     static vibrate(): void;
 }
 
@@ -4058,27 +4374,82 @@ declare class DrawingStyleManager {
     static STYLE_GREEN_STROKE_TRANSPARENT: number;
     static STYLE_ORANGE_STROKE_TRANSPARENT: number;
     static USER_START_STYLE_ID: number;
+    /**
+     * Generates a new `DrawingStyle` object, providing its unique ID. 
+     * The ID starts from 1024 and increases in a sequential order.
+     * @param styleDefinition The properties and values defining the drawing style.
+     * 
+     * @returns The unique ID of the newly created DrawingStyle object.
+     */
     static createDrawingStyle(styleDefinition: DrawingStyle): number;
     private static _getDrawingStyle;
+    /**
+     * Retrieves a specific `DrawingStyle` object using its ID.
+     * @param styleId The unique ID of the `DrawingStyle` to retrieve.
+     * 
+     * @returns The `DrawingStyle` object associated with the given ID.
+     */
     static getDrawingStyle(styleId: number): DrawingStyle;
+    /**
+     * Fetches a collection of all available `DrawingStyle` objects.
+     * 
+     * @returns An array of `DrawingStyle` objects.
+     * [NOTE]: used to be called getDrawingStyles in v4.0.1
+     */
     static getAllDrawingStyles(): Array<DrawingStyle>;
     private static _updateDrawingStyle;
+    /**
+     * Modifies an identified `DrawingStyle` object by its ID.
+     * @param styleId The unique ID of the `DrawingStyle` to update.
+     * @param styleDefinition The new properties and values to update the drawing style with.
+     */
     static updateDrawingStyle(styleId: number, styleDefinition: DrawingStyle): void;
 }
 
-export { CameraEnhancer, CameraEnhancerModule, CameraManager, CameraView, DCEFrame, DrawingItem, DrawingItemEvent, DrawingLayer, DrawingStyle, DrawingStyleManager, EnumDrawingItemMediaType, EnumDrawingItemState, EnumEnhancedFeatures, Feedback, DT_Group as GroupDrawingItem, ImageDataGetter, DT_Image as ImageDrawingItem, ImageEditorView, DT_Line as LineDrawingItem, Note, PlayCallbackInfo, DT_Quad as QuadDrawingItem, DT_Rect as RectDrawingItem, Resolution, DT_Text as TextDrawingItem, TipConfig, VideoDeviceInfo, VideoFrameTag };
+export { CameraEnhancer, CameraEnhancerModule, CameraManager, CameraView, type DCEFrame, DrawingItem, type DrawingItemEvent, DrawingLayer, type DrawingStyle, DrawingStyleManager, EnumDrawingItemMediaType, EnumDrawingItemState, EnumEnhancedFeatures, Feedback, DT_Group as GroupDrawingItem, ImageDataGetter, DT_Image as ImageDrawingItem, ImageEditorView, DT_Line as LineDrawingItem, type Note, type PlayCallbackInfo, DT_Quad as QuadDrawingItem, DT_Rect as RectDrawingItem, type Resolution, DT_Text as TextDrawingItem, type TipConfig, type VideoDeviceInfo, type VideoFrameTag };
 
+import { CapturedResultItem, CapturedResultBase } from 'dynamsoft-core';
 
 interface ParsedResultItem extends CapturedResultItem {
+    /** 
+     * The code type of the parsed result. 
+     */
     codeType: string;
+    /**
+     * The parsed result represented as a JSON-formatted string.
+     */
     jsonString: string;
     parsedFields: Array<{
         FieldName: string;
         Value: string;
     }>;
+    /**
+     * Retrieves the value of a specified field.
+     * @param fieldName The name of the field whose value is being requested.
+     * 
+     * @returns The value of the field.
+     */
     getFieldValue(fieldName: string): string;
+    /**
+     * Retrieves the value of a specified field from the parsed result, without mapping process.
+     * @param fieldName The name of the field whose raw value is being requested.
+     * 
+     * @returns The raw value of the field.
+     */
     getFieldRawValue(fieldName: string): string;
+    /**
+     * Retrieves the mapping status for a specified field name.
+     * @param fieldName The name of the field whose mapping status is being queried.
+     * 
+     * @returns The mapping status of the specified field as an EnumMappingStatus value.
+     */
     getFieldMappingStatus: (fieldName: string) => EnumMappingStatus;
+    /**
+     * Retrieves the validation status for a specified field name.
+     * @param fieldName The name of the field whose validation status is being queried.
+     * 
+     * @returns The validation status of the specified field as an EnumValidationStatus value.
+     */
     getFieldValidationStatus: (fieldName: string) => EnumValidationStatus;
 }
 
@@ -4127,23 +4498,54 @@ declare class CodeParser {
 }
 
 declare class CodeParserModule {
+    /**
+     * Returns the version of the CodeParser module.
+     */
     static getVersion(): string;
+    /**
+     * Loads the specification for a certain type of code strings.
+     * @param specificationName Specifies the specification by its name.
+     * @param specificationPath [Optional] Specifies the path to find the specification file. If not specified, the method will try to load the file from the path specified in `Dynamsoft.Core.CoreModule.engineResourcePaths`. For example, if the path for the "dcp" module is "https://cdn.jsdelivr.net/npm/dynamsoft-code-parser@2.0.20/dist/", then calling `Dynamsoft.DCP.CodeParserModule.loadSpec("AADHAAR")` will load the file "AADHAAR.data" from "https://cdn.jsdelivr.net/npm/dynamsoft-code-parser@2.0.20/dist/specification/AADHAAR.data".
+     * 
+     * @returns A promise that resolves when the specification is loaded. It does not provide any value upon resolution.
+     */
     static loadSpec(specificationName: string | Array<string>, specificationPath?: string): Promise<void>;
 }
 
 declare enum EnumMappingStatus {
+    /** 
+     * Indicates that no mapping operation has been initiated.
+     */
     MS_NONE = 0,
+    /** 
+     * Indicates that the mapping operation was successfully completed.
+     */
     MS_SUCCEEDED = 1,
+    /** 
+     * Indicates that the mapping operation failed to complete.
+     */
     MS_FAILED = 2
 }
 
 declare enum EnumValidationStatus {
+    /** 
+     * Indicates that no validation has been performed.
+     */
     VS_NONE = 0,
+    /** 
+     * Indicates that the validation process was completed successfully.
+     */
     VS_SUCCEEDED = 1,
+    /** 
+     * Indicates that the validation process failed.
+     */
     VS_FAILED = 2
 }
 
 interface ParsedResult extends CapturedResultBase {
+    /** 
+     * An array of `ParsedResultItem` objects. 
+     */
     parsedResultItems: Array<ParsedResultItem>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4152,10 +4554,13 @@ declare module "dynamsoft-capture-vision-bundle" {
     }
 }
 
-export { CodeParser, CodeParserModule, EnumMappingStatus, EnumValidationStatus, ParsedResult, ParsedResultItem };
+export { CodeParser, CodeParserModule, EnumMappingStatus, EnumValidationStatus, type ParsedResult, type ParsedResultItem };
 
 
 declare class DocumentNormalizerModule {
+    /**
+     * Returns the version of the DocumentNormalizer module.
+     */
     static getVersion(): string;
     setThresholdValue(cvr: any, threshold: number, leftLimit: number, rightLimit: number): Promise<void>;
 }
@@ -4173,14 +4578,18 @@ declare enum EnumImageColourMode {
 }
 
 interface DetectedQuadResultItem extends CapturedResultItem {
+    /** The location of the detected quadrilateral within the original image, represented as a quadrilateral shape. */
     location: Quadrilateral;
+    /** A confidence score related to the detected quadrilateral's accuracy as a document boundary. */
     confidenceAsDocumentBoundary: number;
     /** Indicates whether the DetectedQuadResultItem has passed corss verification. */
     CrossVerificationStatus: EnumCrossVerificationStatus;
 }
 
 interface DeskewedImageResultItem extends CapturedResultItem {
+    /** The image data for the deskewed image result. */
     imageData: DSImageData;
+    /** The location where the deskewed image was extracted from within the input image image of the deskew section, represented as a quadrilateral. */
     location: Quadrilateral;
     toCanvas: () => HTMLCanvasElement;
     toImage: (MIMEType: "image/png" | "image/jpeg") => HTMLImageElement;
@@ -4193,6 +4602,7 @@ interface EnhancedImageUnit extends IntermediateResultUnit {
 }
 
 interface EnhancedImageElement extends RegionObjectElement {
+    /** The image data for the enhanced image. */
     imageData: DSImageData;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4213,6 +4623,7 @@ interface EnhancedImageResultItem extends CapturedResultItem {
 }
 
 interface CandidateQuadEdgesUnit extends IntermediateResultUnit {
+    /** An array of candidate edges that may form quadrilaterals, identified during image processing. */
     candidateQuadEdges: Array<Edge>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4222,6 +4633,7 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface CornersUnit extends IntermediateResultUnit {
+    /** An array of detected corners within the image, identified during image processing. */
     corners: Array<Corner>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4231,10 +4643,12 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface DetectedQuadElement extends RegionObjectElement {
+    /** A confidence score measuring the certainty that the detected quadrilateral represents the boundary of a document. */
     confidenceAsDocumentBoundary: number;
 }
 
 interface DetectedQuadsUnit extends IntermediateResultUnit {
+    /** An array of `DetectedQuadElement` objects, each representing a potential document or area of interest within the image. */
     detectedQuads: Array<DetectedQuadElement>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4244,6 +4658,7 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface LongLinesUnit extends IntermediateResultUnit {
+    /** An array of long line segments detected within the image. */
     longLines: Array<LineSegment>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4263,11 +4678,14 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface DeskewedImageElement extends RegionObjectElement {
+    /** The image data for the deskewed image. */
     imageData: DSImageData;
+    /** A reference to another `RegionObjectElement`. */
     referencedElement: RegionObjectElement;
 }
 
 interface DeskewedImageUnit extends IntermediateResultUnit {
+    /** The `DeskewedImageElement` objects representing a piece of the original image after deskewing. */
     deskewedImage: DeskewedImageElement;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4332,27 +4750,53 @@ declare class LabelRecognizerModule {
         loaded: number;
         total: number;
     }) => void;
+    /**
+     * Returns the version of the LabelRecognizer module.
+     */
     static getVersion(): string;
+    /**
+     * Loads a specific data file containing confusable characters information.
+     * @param dataName The name of the recognition data to load.
+     * @param dataPath specifies the path to find the data file. If not specified, the default path points to the package “dynamsoft-capture-vision-data”.
+     */
     static loadConfusableCharsData(dataName: string, dataPath?: string): Promise<unknown>;
+    /**
+     * Loads a specific data file containing overlapping characters information.
+     * @param dataName The name of the recognition data to load.
+     * @param dataPath specifies the path to find the data file. If not specified, the default path points to the package “dynamsoft-capture-vision-data”.
+     */
     static loadOverlappingCharsData(dataName: string, dataPath?: string): Promise<unknown>;
 }
 
 interface CharacterResult {
+    /** The highest confidence character recognized. */
     characterH: string;
+    /** The medium confidence character recognized. */
     characterM: string;
+    /** The lowest confidence character recognized. */
     characterL: string;
+    /** Confidence score for the highest confidence character. */
     characterHConfidence: number;
+    /** Confidence score for the medium confidence character. */
     characterMConfidence: number;
+    /** Confidence score for the lowest confidence character. */
     characterLConfidence: number;
+    /** The location of the recognized character within the image. */
     location: Quadrilateral;
 }
 
 interface TextLineResultItem extends CapturedResultItem {
+    /** The recognized text of the line. */
     text: string;
+    /** The location of the text line within the image. */
     location: Quadrilateral;
+    /** Confidence score for the recognized text line. */
     confidence: number;
+    /** Results for individual characters within the text line. */
     characterResults: Array<CharacterResult>;
+    /** The name of the TextLineSpecification object that generated this TextLineResultItem. */
     specificationName: string;
+    /** The recognized raw text of the line. */
     rawText: string;
 }
 
@@ -4401,11 +4845,14 @@ declare enum EnumRawTextLineStatus {
 }
 
 interface LocalizedTextLineElement extends RegionObjectElement {
+    /** Quadrilaterals for each character in the text line. */
     characterQuads: Array<Quadrilateral>;
+    /** The row number of the text line, starting from 1. */
     rowNumber: number;
 }
 
 interface LocalizedTextLinesUnit extends IntermediateResultUnit {
+    /** An array of `LocalizedTextLineElement` objects, each representing a localized text line. */
     localizedTextLines: Array<LocalizedTextLineElement>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4415,15 +4862,24 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface RecognizedTextLineElement extends RegionObjectElement {
+    /** The recognized text of the line. */
     text: string;
+    /** Confidence score for the recognized text line. */
     confidence: number;
+    /** Results for individual characters within the text line. */
     characterResults: Array<CharacterResult>;
+    /** The row number of the text line, starting from 1. */
     rowNumber: number;
+    /** The name of the TextLineSpecification object that generated this RecognizedTextLineElement. */
     specificationName: string;
+    /** The recognized raw text of the line. */
     rawText: string;
 }
 
 interface RecognizedTextLinesResult extends CapturedResultBase {
+    /**
+     * An array of `TextLineResultItem` objects, each representing a recognized text line within the original image. 
+     */
     textLineResultItems: Array<TextLineResultItem>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4436,26 +4892,39 @@ declare module "dynamsoft-capture-vision-bundle" {
 }
 
 interface SimplifiedLabelRecognizerSettings {
+    /** Name of the character model used for recognition. */
     characterModelName: string;
+    /** Regular expression pattern for validating recognized line strings. */
     lineStringRegExPattern: string;
+    /** Grayscale transformation modes to apply, enhancing detection capability. */
     grayscaleTransformationModes: Array<EnumGrayscaleTransformationMode>;
+    /** Grayscale enhancement modes to apply for improving detection in challenging conditions. */
     grayscaleEnhancementModes: Array<EnumGrayscaleEnhancementMode>;
+    /** 
+     * Threshold for reducing the size of large images to speed up processing. If the size of the image's shorter edge exceeds this threshold, the image may be downscaled to decrease processing time. The standard setting is 2300. */
     scaleDownThreshold: number;
 }
 
 interface BufferedCharacterItem {
+    /** The buffered character value. */
     character: string;
+    /** The image data of the buffered character. */
     image: DSImageData;
+    /**  An array of features, each feature object contains feature id and value of the buffered character.*/
     features: Map<number, number>;
 }
 
 interface CharacterCluster {
+    /** The character value of the cluster. */
     character: string;
+    /** The mean of the cluster. */
     Mean: BufferedCharacterItem;
 }
 
 interface BufferedCharacterItemSet {
+    /** An array of BufferedCharacterItem. */
     items: Array<BufferedCharacterItem>;
+    /** An array of CharacterCluster. */
     characterClusters: Array<CharacterCluster>;
 }
 
@@ -4466,16 +4935,24 @@ interface BufferedCharacterItemSet {
  * - `TLS_RECOGNIZED_SUCCESSFULLY`: Successfully recognized.
  */
 interface RawTextLine extends RegionObjectElement {
+    /** The recognized text of the line. */
     text: string;
+    /** Confidence score for the recognized text line. */
     confidence: number;
+    /** Results for individual characters within the text line. */
     characterResults: Array<CharacterResult>;
+    /** The row number of the text line, starting from 1. */
     rowNumber: number;
+    /** The predefined specification name of this text line*/
     specificationName: string;
+    /** The location of the text line */
     location: Quadrilateral;
+    /** The status of a raw text line.*/
     status: EnumRawTextLineStatus;
 }
 
 interface RawTextLinesUnit extends IntermediateResultUnit {
+    /** An array of RawTextLine. */
     rawTextlines: Array<RawTextLine>;
 }
 declare module "dynamsoft-capture-vision-bundle" {
@@ -4487,6 +4964,9 @@ declare module "dynamsoft-capture-vision-bundle" {
 export { BufferedCharacterItem, BufferedCharacterItemSet, CharacterCluster, CharacterResult, EnumRawTextLineStatus, LabelRecognizerModule, LocalizedTextLineElement, LocalizedTextLinesUnit, RawTextLine, RawTextLinesUnit, RecognizedTextLineElement, RecognizedTextLinesResult, SimplifiedLabelRecognizerSettings, TextLineResultItem, utilsFuncs };
 
 declare class LicenseModule {
+    /**
+     * Returns the version of the License module.
+     */
     static getVersion(): string;
 }
 
@@ -4522,14 +5002,23 @@ declare class LicenseManager {
      */
     static setDeviceFriendlyName(name: string): void;
     static getDeviceFriendlyName(): string;
+    /**
+     * Returns the unique identifier of the device.
+     * 
+     * @returns A promise which, upon resolution, yields a string corresponding to the device's UUID.
+     */
     static getDeviceUUID(): Promise<string>;
 }
 
 export { LicenseManager, LicenseModule };
 
-
+import { EnumCapturedResultItemType, DSImageData, EnumImageFileFormat, Quadrilateral, LineSegment, Contour, Corner, Edge, DSRect } from 'dynamsoft-core';
+import { CapturedResultFilter } from '@dynamsoft/dynamsoft-capture-vision-router';
 
 declare class UtilityModule {
+    /**
+     * Returns the version of the Utility module.
+     */
     static getVersion(): string;
 }
 
@@ -4675,8 +5164,11 @@ declare class ImageDrawer {
 }
 
 declare enum EnumFilterType {
+    /**High-pass filter: Enhances edges and fine details by attenuating low-frequency components.*/
     FT_HIGH_PASS = 0,
+    /**Sharpen filter: Increases contrast along edges to make the image appear more defined.*/
     FT_SHARPEN = 1,
+    /**Smooth (blur) filter: Reduces noise and detail by averaging pixel values, creating a softening effect.*/
     FT_SMOOTH = 2
 }
 
